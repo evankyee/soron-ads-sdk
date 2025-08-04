@@ -1,6 +1,6 @@
 # Soron Ads SDK
 
-Native ads SDK for chat and AI applications.
+Native ads SDK for chat and AI applications. Minimum 4 lines of code.
 
 ## Quick Start
 
