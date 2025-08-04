@@ -1,6 +1,7 @@
 # Soron Ads SDK
 
 Native ads SDK for chat and AI applications. Minimum 4 lines of code.
+Make sure to add the following to your ads.txt:
 ```
 soron.ai, PUBLISHER-ID, DIRECT
 ```
@@ -143,17 +144,40 @@ const adContent = await SoronAds.getFormattedAd(message);
 
 ```javascript
 const ad = await SoronAds.getAd(message);
-// Returns object with these fields:
+// Returns object including these fields (only relevant shown):
 {
-  content: "Check out our premium laptops perfect for gaming!",  // The ad text
+  id: "campaign-123",                                           // Campaign ID
+  title: "Premium Gaming Laptops",                              // Campaign title
+  content: "Check out our premium laptops perfect for gaming!",  // AI-personalized ad text
   advertiser: "TechCorp",                                        // Company name
-  id: "campaign-123",                                            // Campaign ID
-  url: "https://techcorp.com/laptops",                         // Final destination
-  clickUrl: "https://api.../track/click/xyz",                  // TRACKING URL - USE THIS!
-  pixelUrl: "https://api.../track/imp/abc",                    // Impression tracker
   cta: "Shop Now",                                              // Call-to-action text
-  bidCpm: 25.5,                                                 // CPM bid amount
-  source: "direct"                                              // Ad source
+  url: "https://techcorp.com/laptops",                         // Final destination
+  clickUrl: "https://soron-ads-api.../track/click/xyz",         // Click tracking URL - USE THIS!
+  pixelUrl: "https://soron-ads-api.../track/imp/abc",          // Impression tracking URL
+  billingModel: "CPC",                                          // Billing model (CPM/CPC)
+  categories: ["IAB19"],                                        // IAB categories
+  locations: ["US", "CA"],                                      // Target locations
+  source: "direct"                                              // Ad source (direct/rtb)
+  //more fields not shown...
+}
+```
+
+## Agent Response Mode
+
+For AI assistants that want to add sponsored content after their response:
+
+```javascript
+// Simple method - using the simplified API
+SoronAds.init('publisher-YOUR-KEY-HERE');
+
+// After your AI generates a response
+const aiResponse = "Based on your question, I recommend...";
+displayMessage(aiResponse);
+
+// Get and show an ad that naturally follows the AI response
+const adContent = await SoronAds.getFormattedAdForAgent(aiResponse);
+if (adContent) {
+  displayMessage(adContent);
 }
 ```
 
@@ -163,32 +187,40 @@ If you can't use the SDK, here's the raw API:
 
 ```javascript
 // 1. Make API request
-const response = await fetch('https://soron.ai/user-query', {
+const response = await fetch('https://soron.ai/user-query', { // Can change user-query to agent-response
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
     'x-api-key': 'publisher-YOUR-KEY-HERE'  // Your publisher key
   },
   body: JSON.stringify({
-    userPrompt: 'user message here',        // What the user said
+    userPrompt: 'user message here',        // What the user said (if agent-response, change userPrompt to agentResponse)
     userId: 'user-123',                     // Unique user ID
-    platform: 'web'                         // Platform type
+    platform: 'web',                        // Platform type
+    context: {                              // Optional context
+      location: 'US'                        // User location (optional)
+    }
   })
 });
 
 // 2. Get the response
 const data = await response.json();
-/* Response format:
+/* Response format (only showing relevant fields):
 {
   ads: [{
-    content: "ad text...",        // Display this
-    advertiser: "CompanyName",    // Display this
-    clickUrl: "https://...",      // Use for ALL links
-    pixelUrl: "https://...",      // Fire this for impressions
-    url: "https://...",          // DON'T use directly
-    ... other fields
+    id: "campaign-123",           // Campaign ID
+    title: "Campaign Name",       // Campaign title
+    content: "ad text...",        // AI-personalized ad text (display this)
+    advertiser: "CompanyName",    // Advertiser name (display this)
+    cta: "Learn More",           // Call-to-action text
+    clickUrl: "https://...",      // Click tracking URL (use for ALL links)
+    pixelUrl: "https://...",      // Impression tracking URL
+    ...
   }],
-  total: 1
+  total: 1,
+  userPrompt: "user message here",
+  platform: "web",
+  timestamp: "2025-01-15T..."
 }
 */
 
@@ -201,7 +233,7 @@ if (data.ads && data.ads.length > 0) {
   img.src = ad.pixelUrl;
   
   // Display in your chat. Example:
-  const adHtml = `${ad.content}<br><br>— <a href="${ad.clickUrl}" target="_blank">${ad.advertiser}</a>`;
+  const adHtml = `${ad.content}<br><br>— <a href="${ad.clickUrl}" target="_blank">${ad.advertiser}</a> (sponsored)`;
   displayInChat(adHtml);
 }
 ```
