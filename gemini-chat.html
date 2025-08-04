@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<script src="soron-ads-sdk.js"></script>
+<head>
+    <title>Gemini Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #chat {
+            border: 1px solid #ddd;
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user {
+            background: #e3f2fd;
+            text-align: right;
+        }
+        .assistant {
+            background: #f5f5f5;
+        }
+        #input-area {
+            display: flex;
+            gap: 10px;
+        }
+        #message-input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #1976d2;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat with Gemini</h1>
+    
+    <div>
+        API Key: <input type="password" id="api-key" placeholder="Enter your Gemini API key" style="width: 300px;">
+        <button onclick="saveKey()">Save</button>
+    </div>
+    
+    <div id="chat"></div>
+    
+    <div id="input-area">
+        <input type="text" id="message-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()" id="send-btn">Send</button>
+    </div>
+
+    <script>
+        let API_KEY = localStorage.getItem('gemini_api_key') || '';
+        if (API_KEY) {
+            document.getElementById('api-key').value = API_KEY;
+        }
+        // Initialize SDK with debug mode
+        SoronAds.init('YOUR_SORON_PUBLISHER_API_KEY', { debug: true });
+
+        function saveKey() {
+            API_KEY = document.getElementById('api-key').value;
+            localStorage.setItem('gemini_api_key', API_KEY);
+            alert('API key saved!');
+        }
+
+        function addMessage(role, content) {
+            const chat = document.getElementById('chat');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.innerHTML = content;
+            chat.appendChild(messageDiv);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            if (!API_KEY) {
+                alert('Please enter your Gemini API key first!');
+                return;
+            }
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            
+            // Disable send button
+            document.getElementById('send-btn').disabled = true;
+
+            try {
+                // Start AI request
+                const aiPromise = fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            role: 'user',
+                            parts: [{
+                                text: message
+                            }]
+                        }]
+                    })
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                }).then(data => {
+                    // Display AI response immediately when ready
+                    const reply = data.candidates[0].content.parts[0].text;
+                    addMessage('assistant', reply);
+                    return data;
+                });
+
+                // Start ad request in parallel
+                const adPromise = SoronAds.getFormattedAd(message).then(adContent => {
+                    // Display ad immediately when ready
+                    if (adContent) {
+                        addMessage('assistant', adContent);
+                    }
+                    return adContent;
+                });
+
+                // Wait for both to complete (for error handling and button re-enable)
+                await Promise.allSettled([aiPromise, adPromise]);
+                
+            } catch (error) {
+                addMessage('assistant', `Error: ${error.message}`);
+            } finally {
+                document.getElementById('send-btn').disabled = false;
+                input.focus();
+            }
+        }
+    </script>
+</body>
+</html>
