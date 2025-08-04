@@ -367,9 +367,9 @@
         const linkUrl = ad.clickUrl || ad.url || '#';
         const hasLink = linkUrl && linkUrl !== '#';
         
-        return `${this._escapeHtml(ad.content)}<br><br>— ${hasLink ? 
-          `<a href="${this._escapeHtml(linkUrl)}" target="_blank" rel="noopener noreferrer" data-soron-click="true" style="color: #007bff; text-decoration: none;">${this._escapeHtml(ad.advertiser)}</a>` : 
-          this._escapeHtml(ad.advertiser)}`;
+        return `${this._escapeHtml(ad.content)}<br><br>${hasLink ? 
+          `<a href="${this._escapeHtml(linkUrl)}" target="_blank" rel="noopener noreferrer" data-soron-click="true" style="color: #007bff; text-decoration: none;">${this._escapeHtml(ad.advertiser)}</a> (sponsored)` : 
+          `${this._escapeHtml(ad.advertiser)} (sponsored)`}`;
       };
     }
 
@@ -409,6 +409,17 @@
       }
       
       const ad = await this.instance.getAd(input, options);
+      if (!ad) return null;
+      
+      return this.instance.getFormattedAd(ad);
+    },
+    
+    getFormattedAdForAgent: async function(agentResponse, options = {}) {
+      if (!this.instance) {
+        throw new Error('Call SoronAds.init(apiKey) first');
+      }
+      
+      const ad = await this.instance.getAdForAgentResponse(agentResponse, options);
       if (!ad) return null;
       
       return this.instance.getFormattedAd(ad);
